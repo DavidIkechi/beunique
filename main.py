@@ -12,6 +12,7 @@ import logging
 import asyncio
 import uvicorn
 import models, json
+from routers.users import user_router
 
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import HTMLResponse, RedirectResponse
@@ -101,6 +102,9 @@ async def main() -> None:
     sched = asyncio.create_task(cron_rocketry.serve())
     await asyncio.wait([sched, api])
     
+app.include_router(
+    user_router
+    )
 
 @app.get("/")
 async def ping():

@@ -85,7 +85,7 @@ origins = [
     "http://localhost:5173",
     "http://localhost:1111",
     "http://localhost:8000",
-    "http://heed.hng.tech",
+    "https://beunique.vercel.app",
 ]
 
 app.add_middleware(

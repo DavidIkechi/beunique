@@ -15,4 +15,19 @@ class PaymentBase(BaseModel):
     minutes: int
     plan: str
 
+class RefreshToken(BaseModel):
+    refresh_token:str
+
+class Newsletter(BaseModel):
+    email: EmailStr
+    
+class Address(BaseModel):
+    country: str
+    states: str
+    city: str
+    
+class MoreInfo(BaseModel):
+    full_name: Optional[str] = None
+    phone_num: Optional[str] = None
+    
     

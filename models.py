@@ -26,3 +26,25 @@ class User(Base):
     is_due_for_deletion = Column(Boolean, default=False)
     is_super_admin = Column(Boolean, default = False)
     
+    address = relationship("Address", back_populates="users")
+    moreinfo = relationship("MoreInfo", back_populates="users")
+    
+    
+class Address(Base):
+    __tablename__ = 'address'
+    id = Column(Integer, primary_key=True, nullable=False)
+    country = Column(String(255), nullable=True)
+    states = Column(String(255), nullable=True)
+    city = Column(String(255), nullable=True)
+    user_email = Column(String(255), ForeignKey("users.email", ondelete='CASCADE'))
+    users = relationship("User", back_populates="address")
+
+class MoreInfo(Base):
+    __tablename__ = 'moreinfo'
+    id= Column(Integer, primary_key=True, nullable=False)
+    full_name = Column(String(255), nullable=True)
+    phone_num = Column(String(255), nullable=True)
+    user_email = Column(String(255), ForeignKey("users.email", ondelete='CASCADE'))
+    
+    users = relationship("User", back_populates="moreinfo")
+    

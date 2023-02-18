@@ -13,6 +13,7 @@ import asyncio
 import uvicorn
 import models, json
 from routers.users import user_router
+from routers.admin import admin_router
 
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import HTMLResponse, RedirectResponse
@@ -77,6 +78,30 @@ app = FastAPI(
 )
 
 # add all the routers here.
+origins = [
+    "http://localhost",
+    "http://localhost:80",
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://localhost:1111",
+    "http://localhost:8000",
+    "http://heed.hng.tech",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# Set up the middleware to read the request session
+SECRET_KEY = os.getenv('SECRET_KEY') or None
+if SECRET_KEY is None:
+    raise BaseException('Missing SECRET_KEY')
+app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
 
 
 class Server(uvicorn.Server):
@@ -105,6 +130,10 @@ async def main() -> None:
 app.include_router(
     user_router
     )
+
+app.include_router(
+    admin_router
+)
 
 @app.get("/")
 async def ping():

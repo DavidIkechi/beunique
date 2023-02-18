@@ -67,3 +67,93 @@ async def create_user(user: schema.Users, db: Session = Depends(_services.get_se
     return {    
         "detail" : "Account was successfully created."
     }
+    
+@user_router.post('/update_address')
+async def update_address(user_address: schema.Address, db: Session = Depends(_services.get_session),user: models.User = Depends(get_active_user)):
+    try:
+        email = user.email
+        country = user_address.country.strip()
+        states = user_address.states.strip()
+        city = user_address.city.strip()
+        
+        if country == "" or states == "" or city == "":
+            return JSONResponse(
+                status_code=400,
+                content = jsonable_encoder({"detail": "No field should be left empty"})
+            )
+        
+        update_add = crud.update_user_address(db, user_address, email)
+        # update the account.
+    except:
+        raise HTTPException(status_code=500, detail="An unknown error occured. Try Again")
+    
+    return{
+        "detail": "Address was successfully updated."
+    }
+    
+@user_router.post('/user_details')
+async def update_user_details(user_address: schema.MoreInfo, db: Session = Depends(_services.get_session),user: models.User = Depends(get_active_user)):
+    try:
+        if not user_address.full_name or not user_address.phone_num:
+            return JSONResponse(
+                    status_code=400,
+                    content = jsonable_encoder({"detail": "No field should be empty"})
+                )
+        
+        update_phone = crud.update_phone(db, user_address, user.email)
+        
+    except Exception as e:
+        return JSONResponse(
+            status_code= status.HTTP_400_BAD_REQUEST,
+            content=jsonable_encoder({"detail": str(e)}),
+        )
+        
+    return{
+        "detail":"Update was Successful"
+    }
+    
+@user_router.post("/newsletter-subscription", summary="newsletter subscription", status_code = 200)
+def subscribe_to_newletter(subscriber: schema.Newsletter, db: Session = Depends(_services.get_session)):
+    db_subscriber = crud.check_subscrition_email(db, email=subscriber.email)
+
+    if db_subscriber:
+        raise HTTPException(status_code=400, detail="You are already subscribed to our newsletter")
+    try:
+        email_exists = utils.validate_and_verify_email(subscriber.email)
+        if not email_exists:
+            return JSONResponse(
+                status_code=400,
+                content = jsonable_encoder({"detail": "User email couldnot be verified!, please use a proper email"})
+            )
+        crud.add_newsletter_subscriber(db=db, email_add = subscriber.email)
+        return {
+            "detail": subscriber.email
+        }
+    except:
+        raise HTTPException(status_code=500, detail="An unknown error occured. Try Again") 
+
+@user_router.get('/user_detail/', summary="get users detail", status_code = 200)
+async def get_user(db: Session = Depends(_services.get_session),user: models.User = Depends(get_active_user)):
+    try:
+        email_address = user.email
+        db_user = crud.get_user_by_email(db, email=user.email)
+        all_address = db_user.address[0]
+        all_details = db_user.moreinfo[0]
+        
+        all_details = {
+            "email": db_user.email,
+            "country": all_address.country,
+            "state": all_address.states,
+            "city": all_address.city,
+            "full_name":all_details.full_name,
+            "phone": all_details.phone_num
+        }
+    except Exception as e:
+        return JSONResponse(
+                status_code= status.HTTP_400_BAD_REQUEST,
+                content=jsonable_encoder({"detail": str(e)}),
+            )
+    return {
+        "detail": all_details
+    }
+    

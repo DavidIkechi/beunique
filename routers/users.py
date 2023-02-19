@@ -91,7 +91,7 @@ async def update_address(user_address: schema.Address, db: Session = Depends(_se
         "detail": "Address was successfully updated."
     }
     
-@user_router.post('/user_details')
+@user_router.post('/update_user_details')
 async def update_user_details(user_address: schema.MoreInfo, db: Session = Depends(_services.get_session),user: models.User = Depends(get_active_user)):
     try:
         if not user_address.full_name or not user_address.phone_num:
@@ -132,7 +132,7 @@ def subscribe_to_newletter(subscriber: schema.Newsletter, db: Session = Depends(
     except:
         raise HTTPException(status_code=500, detail="An unknown error occured. Try Again") 
 
-@user_router.get('/user_detail/', summary="get users detail", status_code = 200)
+@user_router.get('/user_detail', summary="get users detail", status_code = 200)
 async def get_user(db: Session = Depends(_services.get_session),user: models.User = Depends(get_active_user)):
     try:
         email_address = user.email

@@ -30,4 +30,14 @@ class MoreInfo(BaseModel):
     full_name: Optional[str] = None
     phone_num: Optional[str] = None
     
+class RefreshToken(BaseModel):
+    refresh_token:str
+    
+class UpdatePassword(BaseModel):
+    password: str
+    confirm_password: str
+    
+class ForgetPassword(BaseModel):
+    email: str
+
     

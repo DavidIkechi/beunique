@@ -8,6 +8,7 @@ from rocketry.conds import (
     true, false
 )
 import logging
+import secrets
 
 import asyncio
 import uvicorn
@@ -65,6 +66,7 @@ tags_metadata = [
 # create the database.
 models.Base.metadata.create_all(engine)
 # Open a SSH tunnel
+# print(secrets.token_hex(32))
 
 
 app = FastAPI(

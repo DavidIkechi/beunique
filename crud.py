@@ -91,3 +91,10 @@ def update_phone(db: Session, user_address: schema.MoreInfo, email_add: str):
         db_details.phone_num = user_address.phone_num    
     db.commit()
     return db_details
+
+def reset_password(db: Session, password: str, user: models.User):
+    user.password = pwd_context.hash(password)
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user

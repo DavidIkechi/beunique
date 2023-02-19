@@ -20,7 +20,7 @@ from BitlyAPI import shorten_urls
 import crud
 from awt import main_login, get_access_token, verify_password, refresh
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-# from emails import send_delete_email, send_email, verify_token, send_password_reset_email, password_verif_token, send_deactivation_email
+from emails import send_delete_email, verify_token, send_password_reset_email, password_verif_token, send_deactivation_email
 
 from authlib.integrations.starlette_client import OAuth
 from authlib.integrations.starlette_client import OAuthError
@@ -156,4 +156,60 @@ async def get_user(db: Session = Depends(_services.get_session),user: models.Use
     return {
         "detail": all_details
     }
+    
+@user_router.patch('/reset-password', summary = "reset password", status_code = 200)
+async def reset_password(token: str, new_password: schema.UpdatePassword, db: Session = Depends(_services.get_session)):
+    
+    try:
+        email = password_verif_token(token)
+        user: models.User = crud.get_user_by_email(db, email)
+            
+        if user is None:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        if new_password.password != new_password.confirm_password:
+            raise HTTPException(status_code=400, detail="Password do not match")
+          
+        its_match = verify_password(new_password.password, user.password)
+        its_le_eight = len(new_password.password) < 8
+
+        if its_match:
+            raise HTTPException(status_code=500, detail="New password cannot be the same as old password")
+        elif its_le_eight:
+            raise HTTPException(status_code=500, detail="Password must have at least 8 characters")
+
+        
+        reset_done = crud.reset_password(db, new_password.password, user)
+
+        if reset_done is None:
+            raise HTTPException(status_code=500, detail="Failed to update password")
+        
+    except Exception as e:
+        return JSONResponse(
+            status_code= 500,
+            content=jsonable_encoder({"detail": str(e)}),
+        )
+    
+    return {
+        "detail":reset_done
+        }
+    
+@user_router.post('/forgot-password', summary = "get token for password reset", status_code = 200)
+async def forgot_password(email: schema.ForgetPassword, db: Session = Depends(_services.get_session)):
+    
+    try:
+        user: models.User = crud.get_user_by_email(db, email.email)
+        if user is None:
+            return JSONResponse(
+                status_code= status.HTTP_400_BAD_REQUEST,
+                content=jsonable_encoder({"detail": "User not found"}),
+            )        
+        token = await send_password_reset_email([email.email], user)
+    except Exception as e:
+        return JSONResponse(
+            status_code= status.HTTP_400_BAD_REQUEST,
+            content=jsonable_encoder({"detail": str(e)}),
+        )
+    return {"detail": user}
+
     

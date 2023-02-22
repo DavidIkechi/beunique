@@ -40,4 +40,11 @@ class UpdatePassword(BaseModel):
 class ForgetPassword(BaseModel):
     email: str
 
+class CategoryType(BaseModel):
+    name: str
+
+class ProductSize(BaseModel):
+    name: str 
+    description: Optional[str] = None   
+    
     

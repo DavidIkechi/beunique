@@ -14,8 +14,12 @@ from collections import defaultdict
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-def generate_uuid():
-    return str(uuid.uuid4())
+def generate_product_id(db: Session):
+    prod_id = randint(1000000000, 9999999999)
+    while get_product_by_number(db, prod_id) is not None:
+        prod_id = randint(1000000000, 9999999999)
+        
+    return prod_id
 
 def get_user(db: Session, user_id: int):
     return db.query(models.User).filter(models.User.id == user_id).first()
@@ -98,3 +102,79 @@ def reset_password(db: Session, password: str, user: models.User):
     db.commit()
     db.refresh(user)
     return user
+
+def add_category(db: Session, category: schema.CategoryType):
+    db_category = models.Category(category_name = category.name.lower())
+    db.add(db_category)
+    db.commit()
+    db.refresh(db_category)
+    return db_category
+
+
+def add_product_size(db: Session, product: schema.ProductSize):
+    if product.description is not None:
+        db_size = models.ProductSize(name = product.name.lower(), description = product.description)
+    else:
+        db_size = models.ProductSize(name = product.name.lower())
+    db.add(db_size)
+    db.commit()
+    db.refresh(db_size)  
+    return db_size
+
+def get_category(db: Session, category: str):
+    return db.query(models.Category).filter(models.Category.category_name == category.lower()).first()
+
+def get_sizes(db: Session, product_size: str):
+    return db.query(models.ProductSize).filter(models.ProductSize.name == product_size.lower()).first()
+
+def add_new_product(db: Session, products: dict):
+    db_prod = models.Product(
+        product_name = products['product_name'], 
+        product_num = generate_product_id(db),
+        weights = products['weight'],
+        sales_price = products['sales_price'],
+        category = products['category'],
+        sizes = products['sizes'],
+        price = products['product_price'],
+        units = products['units'],
+        product_url = products['image_url'],
+        description = products['description'],
+        new_stock = product['new_stock']
+    )
+    db.add(db_prod)
+    db.commit()
+    db.refresh(db_prod)
+    db_flash = models.FlashSales(product_name = products['product_name'])
+    db.add(db_flash)
+    db.commit()
+    db.refresh(db_flash)
+    return db_prod
+    
+def get_product(db: Session, product_name: str):
+    return db.query(models.Product).filter(models.Product.product_name == product_name.lower()).first()
+
+def get_product_by_id(db: Session, product_id: int):
+    return db.query(models.Product).filter(models.Product.id == product_id).first()
+
+def get_product_by_slug_name(db: Session, product_slug: str):
+    return ""
+
+def get_product_by_number(db: Session, product_num: int):
+    return db.query(models.Product).filter(models.Product.product_num == product_num).first()
+
+def get_all_products(db: Session):
+    return db.query(models.Product).all()
+
+def get_all_categories(db: Session):
+    return db.query(models.Category).all()
+
+def get_all_sizes(db: Session):
+    return db.query(models.ProductSize).all()
+
+def get_all_orders(db: Session):
+    return []
+
+def get_all_products(db: Session, category: str):
+    return db.query(models.Product).filter(models.Product.category == category.lower()).all()
+    
+    

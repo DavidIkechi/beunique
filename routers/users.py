@@ -29,6 +29,8 @@ from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import HTMLResponse
 from starlette.responses import RedirectResponse
 from datetime import datetime, date
+from fastapi_pagination import Page, Params, paginate
+import locale
 
 
 user_router = APIRouter(
@@ -212,4 +214,46 @@ async def forgot_password(email: schema.ForgetPassword, db: Session = Depends(_s
         )
     return {"detail": user}
 
-    
+@user_router.get('/get_dress/{category}')
+async def get_dress(category: str, db: Session = Depends(_services.get_session)):
+    try:
+        # check if category exists.
+        get_category = crud.get_category(db, category)
+        if get_category is None:
+            return JSONResponse(
+                status_code= status.HTTP_400_BAD_REQUEST,
+                content=jsonable_encoder({"detail": "Sorry, Category of dress not found!"}),
+            )
+                
+        get_item = crud.get_all_products(db, category)
+         
+    except Exception as e:
+        return JSONResponse(
+            status_code= status.HTTP_400_BAD_REQUEST,
+            content=jsonable_encoder({"detail": str(e)}),
+        )
+        
+    return {
+        "detail": get_item
+    }
+     
+@user_router.get('/get_product/{product_id}')
+async def get_dress(product_id: int, db: Session = Depends(_services.get_session)):
+    try:
+        # check if category exists.
+        get_product = crud.get_product_by_id(db, product_id)
+        if get_product is None:
+            return JSONResponse(
+                status_code= status.HTTP_400_BAD_REQUEST,
+                content=jsonable_encoder({"detail": "Sorry, No product with such ID"}),
+            )
+                         
+    except Exception as e:
+        return JSONResponse(
+            status_code= status.HTTP_400_BAD_REQUEST,
+            content=jsonable_encoder({"detail": str(e)}),
+        )
+        
+    return {
+        "detail": get_product
+    }   

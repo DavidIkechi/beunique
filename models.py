@@ -54,7 +54,15 @@ class MoreInfo(Base):
 class Category(Base):
     __tablename__ = "category"
     id = Column(Integer, primary_key = True, nullable=False)
+    slug_name = Column(String(255), unique = True, nullable = False)
     category_name = Column(String(255), unique = True, nullable = False)
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.generate_slug()
+        
+    def generate_slug(self):
+        self.slug_name = slugify(self.category_name)
     
 class ProductSize(Base):
     __tablename__ = "product_size"
@@ -74,7 +82,7 @@ class Product(Base):
     sizes = Column(JSON, nullable = False)
     price = Column(Float, nullable=False, index=True)
     units = Column(Integer, nullable=False, index=True)
-    product_url = Column(URLType, nullable=False)
+    product_url = Column(JSON, nullable=False)
     description = Column(TEXT)
     new_stock =  Column(Boolean, default = False)
     out_of_stocks = Column(Boolean, default = False)

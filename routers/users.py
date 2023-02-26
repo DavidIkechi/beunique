@@ -218,7 +218,7 @@ async def forgot_password(email: schema.ForgetPassword, db: Session = Depends(_s
 async def get_dress(category: str, db: Session = Depends(_services.get_session)):
     try:
         # check if category exists.
-        get_category = crud.get_category(db, category)
+        get_category = crud.get_category_by_slug(db, category)
         if get_category is None:
             return JSONResponse(
                 status_code= status.HTTP_400_BAD_REQUEST,

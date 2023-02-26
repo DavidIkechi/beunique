@@ -105,7 +105,7 @@ def add_product(product_name: str = Form(),
                 sales_price: str = Form(),
                 description: str = Form(),
                 new_stock: bool = Form(),
-                product_url: UploadFile = File(..., content_type='image/*'),
+                product_url: List[UploadFile] = File(..., content_type='image/*'),
                 db: Session = Depends(_services.get_session), user: models.User = Depends(get_admin)):
     
     try:
@@ -127,14 +127,16 @@ def add_product(product_name: str = Form(),
                     status_code= 404,
                     content=jsonable_encoder({"detail": f"size {size} doesn't exist!"}),
                 )
-                
-        result = cloudinary.uploader.upload(product_url.file)
-        url = result.get("secure_url")
-        urls = [url]
-        response = shorten_urls(urls)
-        retrieve_url = response[0]
-        new_url = retrieve_url.short_url
-        
+        all_urls = []
+        for prod in product_url:
+            result = cloudinary.uploader.upload(prod.file)
+            url = result.get("secure_url")
+            urls = [url]
+            response = shorten_urls(urls)
+            retrieve_url = response[0]
+            new_url = retrieve_url.short_url
+            all_urls.append(new_url)
+            
         products = {
             "product_name": product_name.lower(),
             "product_price": product_price,
@@ -144,7 +146,7 @@ def add_product(product_name: str = Form(),
             "description": description,
             "category": category,
             "sizes": sizes,
-            "image_url": new_url,
+            "image_url": all_urls,
             "new_stock": new_stock
         }
         
@@ -254,6 +256,22 @@ async def get_overview(db: Session = Depends(_services.get_session), user: model
 async def get_overview(db: Session = Depends(_services.get_session), user: models.User = Depends(get_admin)):
     try:
         all_sizes = crud.get_all_sizes(db)
+        
+    except Exception as e:
+        return JSONResponse(
+            status_code= 500,
+            content=jsonable_encoder({"detail": str(e)}),
+        )
+    
+    return {
+        "detail": all_sizes
+    }
+    
+    
+@admin_router.get('/delete/{category}')
+async def get_overview(category: str, db: Session = Depends(_services.get_session), user: models.User = Depends(get_admin)):
+    try:
+        all_sizes = crud.delete_category(db, category)
         
     except Exception as e:
         return JSONResponse(

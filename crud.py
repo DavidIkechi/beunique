@@ -124,6 +124,10 @@ def add_product_size(db: Session, product: schema.ProductSize):
 def get_category(db: Session, category: str):
     return db.query(models.Category).filter(models.Category.category_name == category.lower()).first()
 
+def get_category_by_slug(db: Session, category_slug: str):
+    return db.query(models.Category).filter(models.Category.slug_name == category_slug.lower()).first()
+
+    
 def get_sizes(db: Session, product_size: str):
     return db.query(models.ProductSize).filter(models.ProductSize.name == product_size.lower()).first()
 
@@ -139,7 +143,7 @@ def add_new_product(db: Session, products: dict):
         units = products['units'],
         product_url = products['image_url'],
         description = products['description'],
-        new_stock = product['new_stock']
+        new_stock = products['new_stock']
     )
     db.add(db_prod)
     db.commit()
@@ -157,7 +161,7 @@ def get_product_by_id(db: Session, product_id: int):
     return db.query(models.Product).filter(models.Product.id == product_id).first()
 
 def get_product_by_slug_name(db: Session, product_slug: str):
-    return ""
+    return db.query(models.Product).filter(models.Product.category == slug_name.lower()).all()
 
 def get_product_by_number(db: Session, product_num: int):
     return db.query(models.Product).filter(models.Product.product_num == product_num).first()
@@ -177,4 +181,10 @@ def get_all_orders(db: Session):
 def get_all_products(db: Session, category: str):
     return db.query(models.Product).filter(models.Product.category == category.lower()).all()
     
-    
+def delete_category(db:Session, category: str):
+    db.query(models.Category).filter(models.Category.category_name == category.lower()).delete()
+    db.commit()
+    return {
+        "detail": "successfully deleted"
+    }
+     

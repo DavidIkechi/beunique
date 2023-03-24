@@ -118,8 +118,14 @@ def add_product(product_name: str = Form(),
                 content=jsonable_encoder({"detail": f"Category {category} doesn't exist!"}),
             )
         # check for sizes.
+        cate_slug = check_cate.slug_name
         sizes = "".join(sizes)
         sizes = sizes.split(",")
+        
+        dress_size = []
+        # get all the sizes:
+        get_all_sizes = crud.get_all_sizes(db)
+        
         
         for size in sizes:
             if crud.get_sizes(db, size) is None:
@@ -127,6 +133,24 @@ def add_product(product_name: str = Form(),
                     status_code= 404,
                     content=jsonable_encoder({"detail": f"size {size} doesn't exist!"}),
                 )
+        
+        for each_size in get_all_sizes:
+            if each_size.name in sizes:
+                dress_size.append(
+                    {'id': each_size.id,
+                     'size':each_size.name,
+                     'selected': True
+                     }
+                )
+            else:
+                dress_size.append(
+                    {'id': each_size.id,
+                     'size':each_size.name,
+                     'selected': False
+                     }
+                )
+                
+            
         all_urls = []
         for prod in product_url:
             result = cloudinary.uploader.upload(prod.file)
@@ -145,7 +169,8 @@ def add_product(product_name: str = Form(),
             "sales_price": sales_price,
             "description": description,
             "category": category,
-            "sizes": sizes,
+            "sizes": dress_size,
+            "category_slug": cate_slug,
             "image_url": all_urls,
             "new_stock": new_stock
         }
@@ -268,7 +293,7 @@ async def get_overview(db: Session = Depends(_services.get_session), user: model
     }
     
     
-@admin_router.get('/delete/{category}')
+@admin_router.delete('/delete/{category}')
 async def get_overview(category: str, db: Session = Depends(_services.get_session), user: models.User = Depends(get_admin)):
     try:
         all_sizes = crud.delete_category(db, category)
@@ -281,6 +306,21 @@ async def get_overview(category: str, db: Session = Depends(_services.get_sessio
     
     return {
         "detail": all_sizes
+    }
+    
+@admin_router.delete('/delete/{product_id}')
+async def get_overview(product_id: int, db: Session = Depends(_services.get_session), user: models.User = Depends(get_admin)):
+    try:
+        remove_product = crud.delete_product(db, product_id)
+        
+    except Exception as e:
+        return JSONResponse(
+            status_code= 500,
+            content=jsonable_encoder({"detail": str(e)}),
+        )
+    
+    return {
+        "detail": remove_product
     }
         
         

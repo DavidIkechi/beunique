@@ -39,6 +39,7 @@ class Address(Base):
     country = Column(String(255), nullable=True)
     states = Column(String(255), nullable=True)
     city = Column(String(255), nullable=True)
+    address = Column(TEXT, nullable=True)
     user_email = Column(String(255), ForeignKey("users.email", ondelete='CASCADE'))
     users = relationship("User", back_populates="address")
 
@@ -112,5 +113,29 @@ class FlashSales(Base):
         CheckConstraint('end_at >= created_at', name='check_end_at_time_greater_than_created_at_time'),
     )
     
-    
-      
+class PaidItems(Base):
+    __tablename__ = 'paid_items'
+    id = Column(Integer, primary_key=True, nullable=False)
+    email = Column(String(255), nullable=False)
+    order_number = Column(String(255), nullable=False)
+    prod_amount = Column(Float, nullable=False)
+    ship_amount = Column(Float, nullable=False)
+    total_amount = Column(Float, nullable=False)
+    product_id = Column(String(255), nullable=False) 
+    payment_type = Column(String(255), nullable=False)
+    created_at = Column(DateTime(timezone=True), default=datetime.now())
+    payment_gateway = Column(String(255), nullable=False)
+    delivered = Column(String(255), default="")
+    paid_items = relationship("PaidProduct", back_populates="paid_product")
+
+class PaidProduct(Base):
+    __tablename__ = 'paid_products'
+    id = Column(Integer, primary_key=True, nullable=False)
+    product = Column(JSON, nullable = False)
+    delivery_mode = Column(String(255), nullable = False)
+    delivery_address = Column(TEXT, nullable = False)
+    customer_name = Column(String(255), nullable = False)
+    customer_number = Column(String(255), nullable = False)
+    shipping_date = Column(DateTime(timezone=True))
+    product_trans= Column(Integer, ForeignKey("paid_items.id", ondelete='CASCADE'))
+    paid_product = relationship("PaidItems", back_populates="paid_items")      

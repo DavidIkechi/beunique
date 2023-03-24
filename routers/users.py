@@ -21,7 +21,7 @@ import crud
 from awt import main_login, get_access_token, verify_password, refresh
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from emails import send_delete_email, verify_token, send_password_reset_email, password_verif_token, send_deactivation_email
-
+from passlib.context import CryptContext
 from authlib.integrations.starlette_client import OAuth
 from authlib.integrations.starlette_client import OAuthError
 from starlette.config import Config
@@ -30,13 +30,16 @@ from starlette.responses import HTMLResponse
 from starlette.responses import RedirectResponse
 from datetime import datetime, date
 from fastapi_pagination import Page, Params, paginate
-import locale
+import locale, pycountry
+from . import utility as utils
 
 
 user_router = APIRouter(
     prefix='/users',
     tags=['users'],
 )
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # endpoint for user login
 @user_router.post('/login', summary = "create access token for logged in user",
@@ -56,12 +59,12 @@ async def create_user(user: schema.Users, db: Session = Depends(_services.get_se
         raise HTTPException(status_code=400, detail="Email already registered")
 
     # check if email exists and is valid
-    email_exists = utils.validate_and_verify_email(user.email)
-    if not email_exists:
-        return JSONResponse(
-            status_code=400,
-            content = jsonable_encoder({"detail": "User email couldnot be verified!, please use a proper email"})
-        )
+    # email_exists = utils.validate_and_verify_email(user.email)
+    # if not email_exists:
+    #     return JSONResponse(
+    #         status_code=400,
+    #         content = jsonable_encoder({"detail": "User email couldnot be verified!, please use a proper email"})
+    #     )
     # create the user before sending a mail.
     new_user = crud.create_user(db=db, user=user)
     # Sawait send_email([user.email], user)
@@ -74,11 +77,12 @@ async def create_user(user: schema.Users, db: Session = Depends(_services.get_se
 async def update_address(user_address: schema.Address, db: Session = Depends(_services.get_session),user: models.User = Depends(get_active_user)):
     try:
         email = user.email
+        address = user_address.address.strip()
         country = user_address.country.strip()
         states = user_address.states.strip()
         city = user_address.city.strip()
         
-        if country == "" or states == "" or city == "":
+        if country == "" or states == "" or city == "" or address == "":
             return JSONResponse(
                 status_code=400,
                 content = jsonable_encoder({"detail": "No field should be left empty"})
@@ -121,15 +125,15 @@ def subscribe_to_newletter(subscriber: schema.Newsletter, db: Session = Depends(
     if db_subscriber:
         raise HTTPException(status_code=400, detail="You are already subscribed to our newsletter")
     try:
-        email_exists = utils.validate_and_verify_email(subscriber.email)
-        if not email_exists:
-            return JSONResponse(
-                status_code=400,
-                content = jsonable_encoder({"detail": "User email couldnot be verified!, please use a proper email"})
-            )
+        # email_exists = utils.validate_and_verify_email(subscriber.email)
+        # if not email_exists:
+        #     return JSONResponse(
+        #         status_code=400,
+        #         content = jsonable_encoder({"detail": "User email couldnot be verified!, please use a proper email"})
+        #     )
         crud.add_newsletter_subscriber(db=db, email_add = subscriber.email)
         return {
-            "detail": subscriber.email
+            "detail": "Email was successfully added to our Newsletter"
         }
     except:
         raise HTTPException(status_code=500, detail="An unknown error occured. Try Again") 
@@ -148,7 +152,8 @@ async def get_user(db: Session = Depends(_services.get_session),user: models.Use
             "state": all_address.states,
             "city": all_address.city,
             "full_name":all_details.full_name,
-            "phone": all_details.phone_num
+            "phone": all_details.phone_num,
+            "address": all_address.address
         }
     except Exception as e:
         return JSONResponse(
@@ -224,8 +229,10 @@ async def get_dress(category: str, db: Session = Depends(_services.get_session))
                 status_code= status.HTTP_400_BAD_REQUEST,
                 content=jsonable_encoder({"detail": "Sorry, Category of dress not found!"}),
             )
+            
+        new_category = get_category.category_name
                 
-        get_item = crud.get_all_products(db, category)
+        get_item = crud.get_all_products(db, new_category)
          
     except Exception as e:
         return JSONResponse(
@@ -256,4 +263,135 @@ async def get_dress(product_id: int, db: Session = Depends(_services.get_session
         
     return {
         "detail": get_product
-    }   
+    }
+    
+@user_router.get('/get_all_new_product', status_code = 200)
+async def get_dress(db: Session = Depends(_services.get_session)):
+    try:
+        get_new_product = crud.get_new_products(db)
+    except Exception as e:
+        return JSONResponse(
+            status_code=400,
+            content=jsonable_encoder({"detail":str(e)})
+        )
+    
+    return {
+        "detail": get_new_product
+    }
+      
+@user_router.patch('/change_password', summary = "change password", status_code = 200)
+async def change_password(password_schema: schema.ChangePassword, 
+                          db: Session = Depends(_services.get_session), user: models.User = Depends(get_active_user)):
+    try:
+        its_match = password_schema.old_password == password_schema.new_password
+        its_le_eight = len(password_schema.new_password) < 8
+        
+        if not verify_password(password_schema.old_password, user.password):
+            return JSONResponse(
+                status_code= 400,
+                content=jsonable_encoder({"detail": "Please ensure that you've entered the right password."}),
+            )
+        elif its_match:
+            return JSONResponse(
+                status_code= 500,
+                content=jsonable_encoder({"detail": "New password cannot be the same as old password"}),
+            )
+        elif its_le_eight:
+            return JSONResponse(
+                status_code= 500,
+                content=jsonable_encoder({"detail": "Password must have at least 8 characters"}),
+            )
+
+        user_db = crud.get_user_by_email(db, user.email)
+
+        if user_db is None:
+            return JSONResponse(
+                status_code= 500,
+                content=jsonable_encoder({"detail": "User not found"}),
+            )
+        
+        reset_done = crud.reset_password(db, password_schema.new_password, user_db)
+
+        if reset_done is None:
+            return JSONResponse(
+                status_code= 400,
+                content=jsonable_encoder({"detail": "Failed to update password"}),
+            )
+            
+    except Exception as e:
+        return JSONResponse(
+            status_code= 500,
+            content=jsonable_encoder({"detail": str(e)}),
+        )
+    
+    return {
+        "detail": reset_done
+    } 
+ 
+@user_router.get('/countries', status_code = 200)
+async def get_countries(db: Session = Depends(_services.get_session)):
+    try:
+        countries = [{"name": country.name, "code": country.alpha_2} for country in pycountry.countries]
+    except Exception as e:
+        return JSONResponse(
+            status_code=400,
+            content=jsonable_encoder({"detail":str(e)})
+        )
+    
+    return {
+        "detail": countries
+    }
+    
+@user_router.get('/states/{country_code}', status_code = 200)
+async def get_states(country_code: str, db: Session = Depends(_services.get_session)):
+    try:
+        
+        states = [{"name": subdivision.name, "code": subdivision.code} 
+                  for subdivision in pycountry.subdivisions.get(country_code=country_code)]
+        
+    except Exception as e:
+        return JSONResponse(
+            status_code=400,
+            content=jsonable_encoder({"detail":str(e)})
+        )
+    
+    return {
+        "detail": states
+    }
+    
+@user_router.get('/shipping_fee/{shipping_address}', status_code = 200)
+async def get_shipping_fee(shipping_address: str, Session = Depends(_services.get_session)):
+    try:
+        
+        # strip the address and convert to small letter.
+        address = shipping_address.lower().strip()
+        get_amount = utils.get_shipping_fee("home", address)
+           
+    except Exception as e:
+        return JSONResponse(
+            status_code=400,
+            content=jsonable_encoder({"detail":str(e)})
+        )
+    
+    return {
+        "detail": get_amount
+    }
+  
+@user_router.get('/region/{region_state}', status_code = 200)
+async def get_region(region_state: str, Session = Depends(_services.get_session)):
+    try:
+        
+        # strip the address and convert to small letter.
+        states = region_state.lower().strip()
+        get_region = utils.get_region(states)
+           
+    except Exception as e:
+        return JSONResponse(
+            status_code=400,
+            content=jsonable_encoder({"detail":str(e)})
+        )
+    
+    return {
+        "detail": get_region
+    }
+      

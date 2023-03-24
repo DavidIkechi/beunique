@@ -6,9 +6,10 @@ from passlib.context import CryptContext
 from fastapi import HTTPException 
 import cloudinary
 import cloudinary.uploader
+import datetime as dt
 from datetime import datetime
 import uuid
-from sqlalchemy import or_, null
+from sqlalchemy import or_, null, desc
 from sqlalchemy.sql import func
 from collections import defaultdict
 
@@ -78,7 +79,9 @@ def update_user_address(db: Session, user_address: schema.Address, email_add: st
     db_address.country = user_address.country
     db_address.states = user_address.states
     db_address.city = user_address.city
+    db_address.address = user_address.address
     db.commit()
+    
     return db_address
 
 def update_phone(db: Session, user_address: schema.MoreInfo, email_add: str):
@@ -143,6 +146,7 @@ def add_new_product(db: Session, products: dict):
         units = products['units'],
         product_url = products['image_url'],
         description = products['description'],
+        slug_name = products['category_slug'],
         new_stock = products['new_stock']
     )
     db.add(db_prod)
@@ -166,8 +170,8 @@ def get_product_by_slug_name(db: Session, product_slug: str):
 def get_product_by_number(db: Session, product_num: int):
     return db.query(models.Product).filter(models.Product.product_num == product_num).first()
 
-def get_all_products(db: Session):
-    return db.query(models.Product).all()
+# def get_all_products(db: Session):
+#     return db.query(models.Product).all()
 
 def get_all_categories(db: Session):
     return db.query(models.Category).all()
@@ -187,4 +191,71 @@ def delete_category(db:Session, category: str):
     return {
         "detail": "successfully deleted"
     }
+    
+def delete_product(db:Session, product_id: int):
+    db.query(models.Product).filter(models.Product.id == product_id).delete()
+    db.commit()
+    return {
+        "detail": "product successfully deleted"
+    }
+    
+def get_new_products(db: Session, limit: int = 40):
+    return db.query(models.Product).filter(models.Product.new_stock == True).order_by(desc(models.Product.added_at)).limit(limit).all()
+
+def get_product_price(db: Session, product: list):
+    total = 0
+    for item in product:
+        # get the item based on the product_id.
+        get_product = get_product_by_id(db, item['id'])
+        if get_product is None:
+            return None
+        if get_product.units < int(item['quantity']):
+            return None
+        total +=float(get_product.sales_price) * float(item['quantity'])
+        
+    return total
+        
+def check_transaction(db: Session, ref_code: str):
+    return db.query(models.PaidItems).filter(models.PaidItems.order_number == ref_code).first()
+        
+def store_transaction(db: Session, trans: dict):
+    # store transaction
+    transt = models.PaidItems(
+        email = trans['email_address'],
+        order_number = trans['reference'],
+        prod_amount = trans['prod_price'],
+        ship_amount = trans['shipping_fee'],
+        total_amount = trans['total_amount'],
+        product_id = trans['trans_id'],
+        payment_gateway = trans['payment_gateway'],
+        payment_type = trans['payment_channel'],
+        created_at = trans['time_paid'],
+    )
+    
+    db.add(transt)
+    db.commit()
+    
+    get_trans = check_transaction(db , trans['reference'])
+    
+    paid_products = models.PaidProduct(
+        product = trans['paid_items'],
+        delivery_mode = trans['delivery_mode'],
+        delivery_address = trans['delivery_address'],
+        customer_name = trans['customer_name'],
+        customer_number = trans['customer_number'],
+        shipping_date = datetime.now() + dt.timedelta(days=1),
+        product_trans = get_trans.id
+    )
+    db.add(paid_products)
+    db.commit()
+    
+    for item in trans['paid_items']:
+        # get the item based on the product_id.
+        get_product = get_product_by_id(db, item['id'])
+        get_product.units -= int(item['quantity'])
+        db.add(get_product)
+        db.commit()
+        db.refresh(get_product)
+    
+    return paid_products
      

@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import Enum
 from fastapi import FastAPI, File, Form
 from typing import List, Optional
-from pydantic import BaseModel, EmailStr, Extra
+from pydantic import BaseModel, EmailStr, Extra, Field
 from uuid import UUID, uuid1
 
 
@@ -25,6 +25,7 @@ class Address(BaseModel):
     country: str
     states: str
     city: str
+    address: str
     
 class MoreInfo(BaseModel):
     full_name: Optional[str] = None
@@ -46,5 +47,17 @@ class CategoryType(BaseModel):
 class ProductSize(BaseModel):
     name: str 
     description: Optional[str] = None   
+    
+class ProductItems(BaseModel):
+    cust_name: str = Field(...)
+    paid_items: List[dict] = Field(...)
+    delivery_mode: str = Field(...)
+    delivery_address: str = Field(...)
+    cust_numb: str = Field(...)
+    
+class ChangePassword(BaseModel):
+    old_password: str
+    new_password: str
+    
     
     

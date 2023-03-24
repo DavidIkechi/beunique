@@ -15,6 +15,7 @@ import uvicorn
 import models, json
 from routers.users import user_router
 from routers.admin import admin_router
+from routers.payments import order_router
 
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import HTMLResponse, RedirectResponse
@@ -88,6 +89,7 @@ origins = [
     "http://localhost:1111",
     "http://localhost:8000",
     "https://beunique.vercel.app",
+    "https://beunique-nu.vercel.app"
 ]
 
 app.add_middleware(
@@ -135,6 +137,10 @@ app.include_router(
 
 app.include_router(
     admin_router
+)
+
+app.include_router(
+    order_router
 )
 
 @app.get("/")

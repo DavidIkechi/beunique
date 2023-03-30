@@ -125,7 +125,7 @@ class PaidItems(Base):
     payment_type = Column(String(255), nullable=False)
     created_at = Column(DateTime(timezone=True), default=datetime.now())
     payment_gateway = Column(String(255), nullable=False)
-    delivered = Column(String(255), default="")
+    delivered = Column(String(255), default="sorting")
     paid_items = relationship("PaidProduct", back_populates="paid_product")
 
 class PaidProduct(Base):

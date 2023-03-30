@@ -2,6 +2,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.pool import StaticPool, NullPool
 import cloudinary
 import os
 
@@ -16,21 +17,33 @@ cloudinary.config(
     api_secret = os.getenv('CLOUD_SECRET'),
     secure = True
 )
+    
+def get_db_conn_string():
+    DB_HOST = os.environ['DB_HOST']
+    DB_NAME = os.environ['DB_NAME']
+    DB_USER = os.environ['DB_USER']
+    DB_PASS = os.environ['DB_PASS']
+    DB_CONNECTION = DB_USER+":"+DB_PASS+"@"+DB_HOST+"/"+DB_NAME
+    
+    return "mysql+mysqlconnector://"+DB_CONNECTION
 
-DB_HOST = os.getenv("DB_HOST")
-DB_NAME = os.getenv("DB_NAME")
-DB_PASS = os.getenv("DB_PASS")
-DB_USER = os.getenv("DB_USER")
 
-DB_CONNECTION = DB_USER+":"+DB_PASS+"@"+DB_HOST+"/"+DB_NAME
 # SQLALCHEMY_DATABASE_URL = "mysql+mysqlconnector://"+DB_CONNECTION
 
 # SQLALCHEMY_DATABASE_URL = "mysql+mysqlconnector://root:10of10in10@localhost/heed"
-SQLALCHEMY_DATABASE_URL = "sqlite:///./bunique.db"
 
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL,  connect_args = {"check_same_thread": False}
-)
+# database_url = get_db_conn_string()
+# poolclass = NullPool
+# pre_ping = True
+# connect_args = {}
+database_url = "sqlite:///./bunique.db"
+poolclass = StaticPool
+pre_ping = False
+connect_args = {"check_same_thread": False}
+  
+engine = create_engine(database_url, pool_pre_ping = pre_ping,
+                       poolclass = poolclass, connect_args = connect_args)  
+
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

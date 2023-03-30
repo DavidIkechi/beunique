@@ -17,7 +17,7 @@ import cloudinary
 import cloudinary.uploader
 from BitlyAPI import shorten_urls
 import crud
-from awt import main_login, get_access_token, verify_password, refresh
+from admin_awt import main_login, get_access_token, verify_password, refresh
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 # from emails import send_delete_email, send_email, verify_token, send_password_reset_email, password_verif_token, send_deactivation_email
 
@@ -39,6 +39,12 @@ admin_router = APIRouter(
     tags=['admin'],
 )
 
+# endpoint for user login
+@admin_router.post('/login', summary = "create access token for logged in user",
+                  status_code= status.HTTP_200_OK)
+async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(_services.get_session)):
+    # return token once the user has been successfully authenticated, or it returns an error.
+    return await main_login(form_data, db)
 
 @admin_router.get("/get_newsletter-subscribers", summary="Get all existing subscribers", status_code = 200)
 def get_subscribers(skip: int = 0, db: Session = Depends(_services.get_session), user: models.User = Depends(get_admin)):

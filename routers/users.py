@@ -394,4 +394,19 @@ async def get_region(region_state: str, Session = Depends(_services.get_session)
     return {
         "detail": get_region
     }
+    
+@user_router.get('/get_all_products', status_code = 200)
+async def get_products(db: Session = Depends(_services.get_session)):
+    try:
+        get_new_product = crud.get_products(db)
+    except Exception as e:
+        return JSONResponse(
+            status_code=400,
+            content=jsonable_encoder({"detail":str(e)})
+        )
+    
+    return {
+        "detail": get_new_product
+    }
+    
       

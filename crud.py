@@ -33,7 +33,10 @@ def get_users(db: Session, skip: int = 0, limit: int = 100):
 
 def create_user(db: Session, user: schema.Users):
     # set the admin.
-    is_admin= True
+    if user.email in ['beuniqueglobal@gail.com']:
+        is_admin = True
+    else:
+        is_admin = False
     # create the user.
     db_user = models.User(is_admin= is_admin, is_active = True, is_verified = True,
                           email=user.email, password=pwd_context.hash(user.password))
@@ -201,6 +204,10 @@ def delete_product(db:Session, product_id: int):
     
 def get_new_products(db: Session, limit: int = 40):
     return db.query(models.Product).filter(models.Product.new_stock == True).order_by(desc(models.Product.added_at)).limit(limit).all()
+
+def get_products(db: Session, limit: int = 40):
+    return db.query(models.Product).order_by(desc(models.Product.added_at)).limit(limit).all()
+
 
 def get_product_price(db: Session, product: list):
     total = 0

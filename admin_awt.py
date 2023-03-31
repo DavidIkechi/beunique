@@ -120,7 +120,7 @@ async def main_login(form_data, db):
     """
     
     try:
-        check_user, user = authenticate_user(db, form_data.username, form_data.password)
+        check_user, user = authenticate_user(db, form_data.username.lower(), form_data.password)
         if not check_user:
             return JSONResponse(
             status_code=400,
@@ -129,13 +129,13 @@ async def main_login(form_data, db):
         if not user.is_verified:
             return JSONResponse(
                 status_code=400,
-                content=jsonable_encoder({"detail": f"Sorry {user.first_name}, your account is yet to be verified."}),
+                content=jsonable_encoder({"detail": f"Sorry {user.email}, your account is yet to be verified."}),
             )
             
         if not user.is_active:
             return JSONResponse(
                 status_code=400,
-                content=jsonable_encoder({"detail": f"Sorry {user.first_name}, your account is yet to be activated."}),
+                content=jsonable_encoder({"detail": f"Sorry {user.email}, your account is yet to be activated."}),
             )
 
         

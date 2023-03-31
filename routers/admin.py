@@ -2,7 +2,7 @@ from fastapi import FastAPI, status, Depends, APIRouter,  UploadFile, File, Form
 from typing import List, Union, Optional
 import services as _services
 import models, schema
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, load_only
 from auth import (
     get_active_user,
     get_admin,
@@ -199,28 +199,29 @@ def add_product(product_name: str = Form(),
         "detail": "Product was successfully added."
     }
     
-@admin_router.get('/all_stocks')
+@admin_router.get('/all_orders', summary="get all the orders", status_code = 200)
 async def get_all_stocks(params: Params = Depends(), db: Session = Depends(_services.get_session), user: models.User = Depends(get_admin)):
     try:
         # set the locale to the user's default
         locale.setlocale(locale.LC_ALL, 'en_NG.utf8')
         # format the number as a currency string with a custom symbol
-        all_items = []
-        params.size = 10
-        # Start with page 1
-        page_numbers = 1      
+        all_items = []     
         # get the records
-        items = crud.get_all_products(db)
+        items = crud.get_all_orders(db)
+        paid = []
+        
         for item in items:
-            formatted_number = '{:n}'.format(item.price)
-            symbol = '₦'
+            prod_name = crud.get_product_by_id(db, int(item.paid_items[0].paid_id))
+            prod_name = prod_name.product_name
+            prod_name += " - " + item.paid_items[0].product_size                                
             new_item = {
-                "name": item.product_name,
-                "product_num": item.product_num,
-                "category": item.category,
-                "formatted_price": symbol + formatted_number,
-                "price": item.price,
-                "quantity": item.units
+                "product_name": prod_name,
+                "product_id": int(item.paid_items[0].paid_id),
+                "order_num": item.order_number,
+                "order_email":item.email,
+                "order_status": item.delivered,
+                "order_quantity": int(item.paid_items[0].product_quan),
+                "ordered_date": item.created_at
             }
             all_items.append(new_item)
             
@@ -328,5 +329,50 @@ async def get_overview(product_id: int, db: Session = Depends(_services.get_sess
     return {
         "detail": remove_product
     }
+    
+@admin_router.get('/get_stocks')
+async def get_overview(page: int = Query(1, ge=1), page_size: int = 10, db: Session = Depends(_services.get_session), user: models.User = Depends(get_admin)):
+    try:
+        get_product = crud.get_paginated_products(db, page, page_size)
+    except Exception as e:
+        return JSONResponse(
+            status_code = 500,
+            content = jsonable_encoder({"detail": str(e)}),
+        )
+        
+    return {
+        "detail": get_product
+    }
+    
+@admin_router.get('/total_stock')
+async def get_total_stock_amount(db: Session = Depends(_services.get_session), user: models.User = Depends(get_admin)):
+    try:
+        get_amount = crud.get_all_orders(db)
+        total_amt = 0
+        total_unit = 0
+        total_stock = 0
+        
+        stocks = {}
+        
+        for stock in get_amount:
+            if stock.delivered.lower() != "canceled":
+                total_amt += float(stock.total_amount)
+                total_unit  += stock.paid_items[0].product_quan
+                total_stock += 1
+        
+        stocks['total_amount'] = total_amt
+        stocks['total_unit'] = total_unit
+        stocks['total_order'] = total_stock        
+        
+    except Exception as e:
+        return JSONResponse(
+            status_code = 500,
+            content = jsonable_encoder({"detail": str(e)}),
+        )
+        
+    return {
+        "detail": stocks
+    }
+      
         
         

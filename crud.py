@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, load_only
 from fastapi import HTTPException, status, UploadFile, File, Depends, Response
 import models, schema
 from random import randint
@@ -12,6 +12,8 @@ import uuid
 from sqlalchemy import or_, null, desc
 from sqlalchemy.sql import func
 from collections import defaultdict
+from fastapi_pagination import Page, Params
+from fastapi_pagination.ext.sqlalchemy import paginate
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -33,13 +35,13 @@ def get_users(db: Session, skip: int = 0, limit: int = 100):
 
 def create_user(db: Session, user: schema.Users):
     # set the admin.
-    if user.email in ['beuniqueglobal@gail.com']:
+    if user.email.lower() in ['beuniqueglobal@gmail.com','davidakwuruu@gmail.com']:
         is_admin = True
     else:
         is_admin = False
     # create the user.
     db_user = models.User(is_admin= is_admin, is_active = True, is_verified = True,
-                          email=user.email, password=pwd_context.hash(user.password))
+                          email=user.email.lower(), password=pwd_context.hash(user.password))
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
@@ -49,14 +51,16 @@ def create_user(db: Session, user: schema.Users):
     return db_user
 
 def create_address(db: Session, email_add: str):
-    db_address = models.Address(user_email=email_add)
+    db_admin = get_user_by_email(db, email_add)
+    db_address = models.Address(user_id=db_admin.id)
     db.add(db_address)
     db.commit()
     db.refresh(db_address)
     return db_address
 
 def create_more_info(db: Session, email_add: str):
-    db_info = models.MoreInfo(user_email=email_add)
+    db_admin = get_user_by_email(db, email_add)
+    db_info = models.MoreInfo(user_id=db_admin.id)
     db.add(db_info)
     db.commit()
     db.refresh(db_info)
@@ -76,9 +80,9 @@ def check_subscrition_email(db: Session, email: str):
 def get_newsletter_subscribers(db: Session, skip: int = 0):
     return db.query(models.Newsletter).offset(skip).all()
 
-def update_user_address(db: Session, user_address: schema.Address, email_add: str):
+def update_user_address(db: Session, user_address: schema.Address, user_id: int):
     # get the row with that details first.
-    db_address = db.query(models.Address).filter(models.Address.user_email == email_add).first()
+    db_address = db.query(models.Address).get(user_id)
     db_address.country = user_address.country
     db_address.states = user_address.states
     db_address.city = user_address.city
@@ -87,9 +91,9 @@ def update_user_address(db: Session, user_address: schema.Address, email_add: st
     
     return db_address
 
-def update_phone(db: Session, user_address: schema.MoreInfo, email_add: str):
+def update_phone(db: Session, user_address: schema.MoreInfo, user_id: int):
     # get the row with that details first.
-    db_details = db.query(models.MoreInfo).filter(models.MoreInfo.user_email == email_add).first()
+    db_details = db.query(models.MoreInfo).get(user_id)
     if not user_address.full_name or user_address.full_name.strip() == "":
         # update the phone number.
         db_details.phone_num = user_address.phone_num
@@ -245,7 +249,9 @@ def store_transaction(db: Session, trans: dict):
     get_trans = check_transaction(db , trans['reference'])
     
     paid_products = models.PaidProduct(
-        product = trans['paid_items'],
+        product_quan = int(trans['quantity']),
+        paid_id = int(trans['product_id']),
+        product_size = trans['product_size'],
         delivery_mode = trans['delivery_mode'],
         delivery_address = trans['delivery_address'],
         customer_name = trans['customer_name'],
@@ -256,13 +262,38 @@ def store_transaction(db: Session, trans: dict):
     db.add(paid_products)
     db.commit()
     
-    for item in trans['paid_items']:
+    # for item in trans['paid_items']:
         # get the item based on the product_id.
-        get_product = get_product_by_id(db, item['id'])
-        get_product.units -= int(item['quantity'])
-        db.add(get_product)
-        db.commit()
-        db.refresh(get_product)
+    get_product = get_product_by_id(db, int(trans['product_id']))
+    get_product.units -=  int(trans['quantity'])
+    db.add(get_product)
+    db.commit()
+    db.refresh(get_product)
     
     return paid_products
+
+
+def get_paginated_products(db: Session, page, page_size):
+    get_object = db.query(models.Product).options(load_only(
+        models.Product.product_name,
+        models.Product.product_num,
+        models.Product.category,
+        models.Product.sales_price,
+        models.Product.units
+    ))
+    
+    page_offset = Params(page=page, size=page_size)
+    data_result = paginate(get_object, page_offset)
+    
+    return data_result
+
+def get_all_orders(db: Session):
+    return db.query(models.PaidItems).all()
+
+
+def get_ordered_items(db: Session, email: str):
+    return db.query(models.PaidItems).filter(models.PaidItems.email == email).all()
+
+    
+    
      

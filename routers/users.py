@@ -53,7 +53,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
 @user_router.post("/create_users", status_code= status.HTTP_201_CREATED, 
                   summary = "create/register a new user user")
 async def create_user(user: schema.Users, db: Session = Depends(_services.get_session)):
-    db_user = crud.get_user_by_email(db, email=user.email)
+    db_user = crud.get_user_by_email(db, email=user.email.lower())
     # if user exists, throw an exception.
     if db_user:
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -76,7 +76,7 @@ async def create_user(user: schema.Users, db: Session = Depends(_services.get_se
 @user_router.post('/update_address')
 async def update_address(user_address: schema.Address, db: Session = Depends(_services.get_session),user: models.User = Depends(get_active_user)):
     try:
-        email = user.email
+        user_id = user.id
         address = user_address.address.strip()
         country = user_address.country.strip()
         states = user_address.states.strip()
@@ -88,7 +88,7 @@ async def update_address(user_address: schema.Address, db: Session = Depends(_se
                 content = jsonable_encoder({"detail": "No field should be left empty"})
             )
         
-        update_add = crud.update_user_address(db, user_address, email)
+        update_add = crud.update_user_address(db, user_address, user_id)
         # update the account.
     except:
         raise HTTPException(status_code=500, detail="An unknown error occured. Try Again")
@@ -106,7 +106,7 @@ async def update_user_details(user_address: schema.MoreInfo, db: Session = Depen
                     content = jsonable_encoder({"detail": "No field should be empty"})
                 )
         
-        update_phone = crud.update_phone(db, user_address, user.email)
+        update_phone = crud.update_phone(db, user_address, user.id)
         
     except Exception as e:
         return JSONResponse(
@@ -220,10 +220,11 @@ async def forgot_password(email: schema.ForgetPassword, db: Session = Depends(_s
     return {"detail": user}
 
 @user_router.get('/get_dress/{category}')
-async def get_dress(category: str, db: Session = Depends(_services.get_session)):
+async def get_dress(category: str, params: Params = Depends(), db: Session = Depends(_services.get_session)):
     try:
         # check if category exists.
         get_category = crud.get_category_by_slug(db, category)
+
         if get_category is None:
             return JSONResponse(
                 status_code= status.HTTP_400_BAD_REQUEST,
@@ -233,6 +234,7 @@ async def get_dress(category: str, db: Session = Depends(_services.get_session))
         new_category = get_category.category_name
                 
         get_item = crud.get_all_products(db, new_category)
+        returned_page = paginate(get_item, params)
          
     except Exception as e:
         return JSONResponse(
@@ -241,7 +243,11 @@ async def get_dress(category: str, db: Session = Depends(_services.get_session))
         )
         
     return {
-        "detail": get_item
+        "detail": returned_page.items,
+        "total": returned_page.total,
+        "page": returned_page.page,
+        "size": returned_page.size,
+        "pages": returned_page.pages
     }
      
 @user_router.get('/get_product/{product_id}')
@@ -409,4 +415,39 @@ async def get_products(db: Session = Depends(_services.get_session)):
         "detail": get_new_product
     }
     
+@user_router.get('/orders')
+async def user_order(params: Params = Depends(), db: Session = Depends(_services.get_session),user: models.User = Depends(get_active_user)):
+    try:
+        
+        items = crud.get_ordered_items(db, user.email)
+        all_items = []
+        
+        for item in items:
+            prod_name = crud.get_product_by_id(db, int(item.paid_items[0].paid_id))
+            prod_url = prod_name.product_url[0]
+            prod_name = prod_name.product_name
+            prod_name += " - " + item.paid_items[0].product_size                                
+            new_item = {
+                "product_name": prod_name,
+                "product_id": int(item.paid_items[0].paid_id),
+                "order_num": item.order_number,
+                "product_url": prod_url,
+                "order_status": item.delivered,
+                "order_quantity": int(item.paid_items[0].product_quan),
+                "ordered_date": item.created_at,
+                "delivered_date": item.paid_items[0].shipping_date
+            }
+            all_items.append(new_item)
+            
+        returned_page = paginate(all_items, params)
+        
+    except Exception as e:
+        return JSONResponse(
+            status_code= status.HTTP_400_BAD_REQUEST,
+            content=jsonable_encoder({"detail": str(e)}),
+        )
+        
+    return{
+        "detail": returned_page
+    }
       

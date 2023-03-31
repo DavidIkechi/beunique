@@ -114,42 +114,51 @@ async def verify_order(ref_code: str, db: Session = Depends(_services.get_sessio
         conv_date = get_date[1].split(".")[0]
         new_date1 = get_date[0] + " " + conv_date
         new_date2 = datetime.strptime(new_date1, "%Y-%m-%d %H:%M:%S")
-        transaction = {"amount": get_status['amount']/100,
-                        "trans_id": str(get_status['id']),
-                        "reference": get_status['reference'],
-                        "customer_name": get_status['metadata']['product']['customer_name'],
-                        "paid_items": get_status['metadata']['product']['paid_items'],
-                        "time_paid": new_date2,
-                        "payment_channel": get_status['channel'],
-                        "customer_number": get_status['metadata']['product']['customer_number'],
-                        "delivery_mode": get_status['metadata']['product']['delivery_mode'],
-                        "delivery_address": get_status['metadata']['product']['delivery_address'],
-                        "total_amount": get_status['metadata']['product']['total_amount'],
-                        "shipping_fee": get_status['metadata']['product']['shipping_fee'],
-                        "prod_price": get_status['metadata']['product']['prod_price'],   
-                        "email_address": user.email,
-                        "payment_gateway": get_status['metadata']['product']['gateway']
-                    }
-        # check if the transaction has already been submitted
+        
+        paid_items = get_status['metadata']['product']['paid_items']
+        for items in paid_items:            
+            product_id = items['id']
+            quantity = items['quantity']
+            size = items['size']
+        
+            transaction = {"amount": get_status['amount']/100,
+                            "trans_id": str(get_status['id']),
+                            "reference": get_status['reference'],
+                            "customer_name": get_status['metadata']['product']['customer_name'],
+                            "product_id": product_id,
+                            "product_size": size,
+                            "quantity": quantity,
+                            "time_paid": new_date2,
+                            "payment_channel": get_status['channel'],
+                            "customer_number": get_status['metadata']['product']['customer_number'],
+                            "delivery_mode": get_status['metadata']['product']['delivery_mode'],
+                            "delivery_address": get_status['metadata']['product']['delivery_address'],
+                            "total_amount": get_status['metadata']['product']['total_amount'],
+                            "shipping_fee": get_status['metadata']['product']['shipping_fee'],
+                            "prod_price": get_status['metadata']['product']['prod_price'],   
+                            "email_address": user.email,
+                            "payment_gateway": get_status['metadata']['product']['gateway']
+                        }
+    # check if the transaction has already been submitted
         check_trans = crud.check_transaction(db, ref_code)
         
         if check_trans is not None:
             return {"detail": transaction, 'status':"failed"}
         
         if get_status['status'].strip().lower() != "success":
-            # send a mail receipt
-            # await send_transaction_failure_receipt([user.email], transaction)
-            # await send_failed_payment_email([email], user, 
-            #                                     plan=transaction['plan'], 
-            #                                     minutes=transaction['minutes'], 
-            #                                     price=transaction['amount'])
+        # send a mail receipt
+        # await send_transaction_failure_receipt([user.email], transaction)
+        # await send_failed_payment_email([email], user, 
+        #                                     plan=transaction['plan'], 
+        #                                     minutes=transaction['minutes'], 
+        #                                     price=transaction['amount'])
             return JSONResponse(
                 status_code= 400,
                 content=jsonable_encoder({"detail": "Sorry, your payment failed, please try again"}),
             )
-            
-            
-            #push the details into the database.
+                
+                
+                #push the details into the database.
         trans_crud = crud.store_transaction(db, transaction)
             # top_up_details = {"minutes": get_status['metadata']['minutes'],
             #                "plan": get_status['metadata']['plan']}
@@ -201,22 +210,32 @@ async def heed_webhook_view(request: Request, db: Session = Depends(_services.ge
         conv_date = get_date[1].split(".")[0]
         new_date1 = get_date[0] + " " + conv_date
         new_date2 = datetime.strptime(new_date1, "%Y-%m-%d %H:%M:%S")
-        transaction = {"amount": get_status['amount']/100,
-                        "trans_id": str(get_status['id']),
-                        "reference": get_status['reference'],
-                        "customer_name": get_status['metadata']['product']['customer_name'],
-                        "paid_items": get_status['metadata']['product']['paid_items'],
-                        "time_paid": new_date2,
-                        "payment_channel": get_status['channel'],
-                        "customer_number": get_status['metadata']['product']['customer_number'],
-                        "delivery_mode": get_status['metadata']['product']['delivery_mode'],
-                        "delivery_address": get_status['metadata']['product']['delivery_address'],
-                        "total_amount": get_status['metadata']['product']['total_amount'],
-                        "shipping_fee": get_status['metadata']['product']['shipping_fee'],
-                        "prod_price": get_status['metadata']['product']['prod_price'],   
-                        "email_address": get_status['metadata']['email'],
-                        "payment_gateway": get_status['metadata']['product']['gateway']
-                    }
+        paid_items = get_status['metadata']['product']['paid_items']
+        for items in paid_items:            
+            product_id = items['id']
+            quantity = items['quantity']
+            size = items['size']
+        
+            transaction = {"amount": get_status['amount']/100,
+                            "trans_id": str(get_status['id']),
+                            "reference": get_status['reference'],
+                            "customer_name": get_status['metadata']['product']['customer_name'],
+                            "product_id": product_id,
+                            "product_size": size,
+                            "quantity": quantity,
+                            "time_paid": new_date2,
+                            "payment_channel": get_status['channel'],
+                            "customer_number": get_status['metadata']['product']['customer_number'],
+                            "delivery_mode": get_status['metadata']['product']['delivery_mode'],
+                            "delivery_address": get_status['metadata']['product']['delivery_address'],
+                            "total_amount": get_status['metadata']['product']['total_amount'],
+                            "shipping_fee": get_status['metadata']['product']['shipping_fee'],
+                            "prod_price": get_status['metadata']['product']['prod_price'],   
+                            "email_address": user.email,
+                            "payment_gateway": get_status['metadata']['product']['gateway']
+                        }
+       
+       
         user = crud.get_user_by_email(db, email=transaction['email_address'])
         email = transaction['email_address']
         if check_trans is not None:

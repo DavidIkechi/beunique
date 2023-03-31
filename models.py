@@ -40,7 +40,7 @@ class Address(Base):
     states = Column(String(255), nullable=True)
     city = Column(String(255), nullable=True)
     address = Column(TEXT, nullable=True)
-    user_email = Column(String(255), ForeignKey("users.email", ondelete='CASCADE'))
+    user_id = Column(Integer, ForeignKey("users.id", ondelete='CASCADE'))
     users = relationship("User", back_populates="address")
 
 class MoreInfo(Base):
@@ -48,7 +48,7 @@ class MoreInfo(Base):
     id= Column(Integer, primary_key=True, nullable=False)
     full_name = Column(String(255), nullable=True)
     phone_num = Column(String(255), nullable=True)
-    user_email = Column(String(255), ForeignKey("users.email", ondelete='CASCADE'))
+    user_id = Column(Integer, ForeignKey("users.id", ondelete='CASCADE'))
     
     users = relationship("User", back_populates="moreinfo")
     
@@ -131,7 +131,9 @@ class PaidItems(Base):
 class PaidProduct(Base):
     __tablename__ = 'paid_products'
     id = Column(Integer, primary_key=True, nullable=False)
-    product = Column(JSON, nullable = False)
+    product_quan = Column(Integer, default= 0, nullable = False)
+    paid_id = Column(Integer, default=0, nullable=False)
+    product_size = Column(String(255), default="", nullable=False)
     delivery_mode = Column(String(255), nullable = False)
     delivery_address = Column(TEXT, nullable = False)
     customer_name = Column(String(255), nullable = False)

@@ -32,14 +32,14 @@ def get_db_conn_string():
 
 # SQLALCHEMY_DATABASE_URL = "mysql+mysqlconnector://root:10of10in10@localhost/heed"
 
-# database_url = get_db_conn_string()
-# poolclass = NullPool
-# pre_ping = True
-# connect_args = {}
-database_url = "sqlite:///./bunique.db"
-poolclass = StaticPool
-pre_ping = False
-connect_args = {"check_same_thread": False}
+database_url = get_db_conn_string()
+poolclass = NullPool
+pre_ping = True
+connect_args = {}
+# database_url = "sqlite:///./bunique.db"
+# poolclass = StaticPool
+# pre_ping = False
+# connect_args = {"check_same_thread": False}
   
 engine = create_engine(database_url, pool_pre_ping = pre_ping,
                        poolclass = poolclass, connect_args = connect_args)  

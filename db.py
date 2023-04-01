@@ -2,7 +2,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.pool import StaticPool, NullPool
+from sqlalchemy.pool import StaticPool, NullPool, QueuePool
 import cloudinary
 import os
 
@@ -33,8 +33,11 @@ def get_db_conn_string():
 # SQLALCHEMY_DATABASE_URL = "mysql+mysqlconnector://root:10of10in10@localhost/heed"
 
 database_url = get_db_conn_string()
-poolclass = NullPool
-pre_ping = True
+poolclass = QueuePool
+poolsize=5
+maxoverflow=10
+pooltimeout=10
+pre_ping = False
 connect_args = {}
 connect_args["connect_timeout"] = 60 * 4
 # database_url = "sqlite:///./bunique.db"
@@ -42,8 +45,9 @@ connect_args["connect_timeout"] = 60 * 4
 # pre_ping = False
 # connect_args = {"check_same_thread": False}
   
-engine = create_engine(database_url, pool_pre_ping = pre_ping,
-                       poolclass = poolclass, connect_args = connect_args)  
+engine = create_engine(database_url, pool_pre_ping = pre_ping, poolclass = poolclass, pool_size=poolsize, 
+                       pool_timeout = pooltimeout, max_overflow = maxoverflow,
+                       connect_args = connect_args)  
 
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

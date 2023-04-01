@@ -186,9 +186,6 @@ def get_all_categories(db: Session):
 def get_all_sizes(db: Session):
     return db.query(models.ProductSize).all()
 
-def get_all_orders(db: Session):
-    return []
-
 def get_all_products(db: Session, category: str):
     return db.query(models.Product).filter(models.Product.category == category.lower()).all()
     

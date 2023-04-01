@@ -145,13 +145,6 @@ def add_product(product_name: str = Form(),
                 dress_size.append(
                     {'id': each_size.id,
                      'size':each_size.name,
-                     'selected': True
-                     }
-                )
-            else:
-                dress_size.append(
-                    {'id': each_size.id,
-                     'size':each_size.name,
                      'selected': False
                      }
                 )
@@ -242,19 +235,23 @@ async def get_overview(db: Session = Depends(_services.get_session), user: model
         # get all the categories.
         all_category = len(crud.get_all_categories(db))
         # get all the orders.
-        all_orders = crud.get_all_orders(db)
-        all_order = len(all_orders)
-        # get all units.
-        all_products = sum([item.units for item in crud.get_all_products(db)])
-        # get all sales
-        all_sales = 0
+        get_amount = crud.get_all_orders(db)
+        total_amt = 0
+        total_unit = 0
+        total_stock = 0
+                
+        for stock in get_amount:
+            if stock.delivered.lower() != "canceled":
+                total_amt += float(stock.total_amount)
+                total_unit  += stock.paid_items[0].product_quan
+                total_stock += 1
         
         all_overview = [
             {
-                "all_sales": all_sales,
-                "all_units": all_products,
+                "all_sales": total_amt,
+                "all_units": total_unit,
                 "all_categories": all_category,
-                "all_orders": all_order
+                "all_orders": total_stock
             }
         ]            
         
@@ -344,35 +341,3 @@ async def get_overview(page: int = Query(1, ge=1), page_size: int = 10, db: Sess
         "detail": get_product
     }
     
-@admin_router.get('/total_stock')
-async def get_total_stock_amount(db: Session = Depends(_services.get_session), user: models.User = Depends(get_admin)):
-    try:
-        get_amount = crud.get_all_orders(db)
-        total_amt = 0
-        total_unit = 0
-        total_stock = 0
-        
-        stocks = {}
-        
-        for stock in get_amount:
-            if stock.delivered.lower() != "canceled":
-                total_amt += float(stock.total_amount)
-                total_unit  += stock.paid_items[0].product_quan
-                total_stock += 1
-        
-        stocks['total_amount'] = total_amt
-        stocks['total_unit'] = total_unit
-        stocks['total_order'] = total_stock        
-        
-    except Exception as e:
-        return JSONResponse(
-            status_code = 500,
-            content = jsonable_encoder({"detail": str(e)}),
-        )
-        
-    return {
-        "detail": stocks
-    }
-      
-        
-        

@@ -68,9 +68,11 @@ def get_shipping_fee(del_mode, del_addr):
             return 3000
         return 4000    
     return 0
-    
+
+
 def generate_signature(secret: bytes, payload: bytes, digest_method = hashlib.sha512):
     return hmac.new(secret.encode('utf-8'), payload, digest_method).hexdigest()
+
 
 def get_region(states: str):
     if states == "lagos":

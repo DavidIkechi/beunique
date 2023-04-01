@@ -36,6 +36,7 @@ database_url = get_db_conn_string()
 poolclass = NullPool
 pre_ping = True
 connect_args = {}
+connect_args["connect_timeout"] = 60 * 4
 # database_url = "sqlite:///./bunique.db"
 # poolclass = StaticPool
 # pre_ping = False

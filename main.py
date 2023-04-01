@@ -89,7 +89,10 @@ origins = [
     "http://localhost:1111",
     "http://localhost:8000",
     "https://beunique.vercel.app",
-    "https://beunique-nu.vercel.app"
+    "https://beunique-nu.vercel.app",
+    "https://beuniquewears.com",
+    "https://www.beuniquewears.com",
+    "https://beunique-1.vercel.app"
 ]
 
 app.add_middleware(
